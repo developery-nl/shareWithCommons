@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="label_userlogin">Username (you need an account on Commons)</string>
+    <string name="app_name">Wikimedia Commons</string>
+    <string name="hint_userlogin">Username</string>
+    <string name="label_password">Password</string>
+    <string name="hint_password">Password</string>
+    <string name="label_startbutton">Start uploading..</string>
+    <string name="label_uploaddetails">Filename</string>
+    <string name="hint_filename">new filename.jpg</string>
+    <string name="label_description">Description</string>
+    <string name="hint_description">File description</string>
+    <string name="label_license">License</string>
+    <string name="hint_license">License</string>
+</resources>
