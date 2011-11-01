@@ -28,8 +28,12 @@ import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import javax.security.auth.login.*; // useful exception types
 
+
+import android.app.ProgressDialog;
 import android.nfc.FormatException;
 import android.util.AndroidException;
+import android.widget.Button;
+import android.widget.Toast;
 
 /**
  *  This is a somewhat sketchy bot framework for editing MediaWiki wikis.
@@ -44,7 +48,7 @@ import android.util.AndroidException;
  *  TODO code clean up of unused functions
  *  
  *  @author MER-C, Michiel1972 and contributors
- *  @version 0.24android
+ *  @version 0.24 android
  */
 public class Wiki implements Serializable
 {
@@ -515,6 +519,8 @@ public class Wiki implements Serializable
     // retry flag
     private boolean retry = true;
 
+	private UploadToCommonsActivity uplActivity;
+
     // serial version
     private static final long serialVersionUID = -8745212681497644126L;
 
@@ -539,11 +545,15 @@ public class Wiki implements Serializable
      *  Creates a new connection.
      *  @since 0.02
      */
-    public Wiki()
+    public Wiki(UploadToCommonsActivity uplActivity)
     {
-        this("");
+    	this("",uplActivity);
+    	
+        
     }
 
+    
+    
     /**
      *  Creates a new connection to a wiki. WARNING: if the wiki uses a
      *  $wgScriptpath other than the default <tt>/w</tt>, you need to call
@@ -553,13 +563,14 @@ public class Wiki implements Serializable
      *  @param domain the wiki domain name e.g. en.wikipedia.org (defaults to
      *  en.wikipedia.org)
      */
-    public Wiki(String domain)
+    public Wiki(String domain, UploadToCommonsActivity uplActivity)
     {
         if (domain == null || domain.isEmpty())
             //domain = "en.wikipedia.org";
         	domain = "commons.wikimedia.org";
         this.domain = domain;
-
+        this.uplActivity = uplActivity;
+        
         // init variables
         initVars();
     }
@@ -897,10 +908,14 @@ public class Wiki implements Serializable
             user = new User(username);
             boolean apihighlimit = user.isAllowedTo("apihighlimits");
             max = apihighlimit ? 5000 : 500;
+            Toast.makeText(uplActivity,"Login successfull", Toast.LENGTH_SHORT).show();
+            
             log(Level.INFO, "Successfully logged in as " + username + ", highLimit = " + apihighlimit, "login");
         }
         else
         {
+        	Toast.makeText(uplActivity,"Failed to login", Toast.LENGTH_SHORT).show();
+             
             log(Level.WARNING, "Failed to log in as " + username, "login");
             try
             {
@@ -3069,10 +3084,7 @@ public class Wiki implements Serializable
 
     
     /**
-     *  Uploads an image. Equivalent to [[Special:Upload]]. Supported
-     *  extensions are (case-insensitive) "png", "jpg", "gif" and "svg". You
-     *  need to be logged on to do this. This method is thread safe and subject
-     *  to the throttle.
+     *  Uploads an image. 
      *
      *  @param data the image file in bytes
      *  @param filename the target file name (Example.png, not File:Example.png)
@@ -3093,7 +3105,7 @@ public class Wiki implements Serializable
     		                        String reason) throws IOException, LoginException
     {
     	log(Level.INFO, "upload", "upload");
-        // WORK IN PROGRESS! (WMF slow scapping doesn't help.)
+        // WORK IN PROGRESS! 
 
         // the usual stuff
         // throttle
@@ -3103,14 +3115,9 @@ public class Wiki implements Serializable
         // check for log in
         if (user == null || !user.isAllowedTo("upload"))
         {
-            ClassNotFoundException ex = new ClassNotFoundException("Permission denied: cannot upload files.");
-            logger.logp(Level.SEVERE, "Wiki", "upload()", "[" + domain + "] Cannot upload - permission denied.", ex);
-            try {
-				throw ex;
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+            Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
+            
+             return;
         }
         try {
 			statusCheck();
@@ -3119,26 +3126,41 @@ public class Wiki implements Serializable
 			e1.printStackTrace();
 		}
 
-        // protection and token
+        // get exists, protection and token
         HashMap<String, Object> info = getPageInfo("File:" + filename);
         int level = (Integer)info.get("protection");
+        boolean imageExists = (Boolean)info.get("exists");
+        
         // check protection level
-        try {
+		try {
 			if (!checkRights(level, false))
-			{
-				ClassNotFoundException ex = new ClassNotFoundException("Permission denied: page is protected.");
-			    logger.logp(Level.WARNING, "Wiki", "upload()", "[" + getDomain() + "] Cannot upload - permission denied.", ex);
-			    throw ex;
-			}
+				{
+					Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
+
+				}
 		} catch (CRLException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		} catch (ClassNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
 		}
+
         String wpEditToken = (String)info.get("token");
 
+        
+        //handle existing file
+        
+        if (imageExists) {
+        	Toast.makeText(uplActivity,"Filename already exist", Toast.LENGTH_LONG).show();
+        	
+        	
+        	if (!uplActivity.isDoOverwrite()) { 
+        		
+
+        		
+        		return; //skip upload process
+        	}
+        }
+
+		
         // prepare MIME type
         String extension = filename2.substring(filename2.length() - 3).toUpperCase().toLowerCase();
         if (extension.equals("jpg"))
@@ -3262,10 +3284,16 @@ public class Wiki implements Serializable
 
             // TODO: check for specific errors here
             in.close();
+            
+            final Button button = (Button) uplActivity.findViewById(R.id.button1);
+            button.setText("Done, thanks for sharing your image");
+            
+            
         }
         catch (IOException e)
         {
             // don't bother retrying - uploading is a pain
+        	Toast.makeText(uplActivity,"Upload error", Toast.LENGTH_SHORT).show();
         	log(Level.INFO, "out response ioexception", "upload");
             logger.logp(Level.SEVERE, "Wiki", "upload()", "[" + domain + "] EXCEPTION:  ", e);
             throw e;
@@ -3285,33 +3313,6 @@ public class Wiki implements Serializable
     }
 
     
-    
-    public void examplePost(){
-    	try {
-    	    // Construct data
-    	    String data = URLEncoder.encode("key1", "UTF-8") + "=" + URLEncoder.encode("value1", "UTF-8");
-    	    data += "&" + URLEncoder.encode("key2", "UTF-8") + "=" + URLEncoder.encode("value2", "UTF-8");
-
-    	    // Send data
-    	    URL url = new URL("http://hostname:80/cgi");
-    	    URLConnection conn = url.openConnection();
-    	    conn.setDoOutput(true);
-    	    OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-    	    wr.write(data);
-    	    wr.flush();
-
-    	    // Get the response
-    	    BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    	    String line;
-    	    while ((line = rd.readLine()) != null) {
-    	        // Process line...
-    	    }
-    	    wr.close();
-    	    rd.close();
-    	} catch (Exception e) {
-    	}
-    }
-
     // USER METHODS
 
     /**

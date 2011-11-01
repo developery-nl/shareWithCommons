@@ -1,18 +1,16 @@
 package nl.michiel1972.main;
 
-import java.io.BufferedReader;
-import java.io.File;
+
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import javax.security.auth.login.LoginException;
 
 import nl.michiel1972.main.R;
-
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -20,14 +18,18 @@ import android.database.Cursor;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.nfc.FormatException;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Toast;
 
 public class UploadToCommonsActivity extends Activity {
 	
@@ -40,7 +42,8 @@ public class UploadToCommonsActivity extends Activity {
 	private String exif_datetime="";
 	private Wiki theWiki;
 	private byte[] data;
-	
+	private boolean doOverwrite=false;
+
 
 	/* Called when the activity is first created. This is shown only once with empty parameters 
 	 * (non-Javadoc)
@@ -54,7 +57,9 @@ public class UploadToCommonsActivity extends Activity {
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
 		String action = intent.getAction();
-
+ 
+		
+		
 		// if this is from the share menu
 		if (Intent.ACTION_SEND.equals(action))
 		{
@@ -62,6 +67,8 @@ public class UploadToCommonsActivity extends Activity {
 			{
 				try
 				{
+					
+					
 					// Hide standard keyboard
 					getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 					
@@ -229,8 +236,10 @@ public class UploadToCommonsActivity extends Activity {
      */
 	protected void startProcessingUpload() throws LoginException {
 		
-		theWiki= new Wiki();
+		theWiki= new Wiki(this);
 				
+
+		
         //Get user data (data may be edited after suggestions)
 		EditText temp = (EditText) this.findViewById(R.id.editText1);
 		username = temp.getText().toString().trim();
@@ -249,6 +258,8 @@ public class UploadToCommonsActivity extends Activity {
 		SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         String strSavedMem1 = sharedPreferences.getString("MEM1", "unknown");
 		if (!username.equals(strSavedMem1)){ 
+			 Toast.makeText(this,"Login data stored", Toast.LENGTH_SHORT).show();
+		         
 		     SavePreferences("MEM1", username);
 		     SavePreferences("MEM2", password);
 		     SavePreferences("MEM5", licenseinfo);
@@ -281,7 +292,7 @@ public class UploadToCommonsActivity extends Activity {
                     filename, 
                     description, 
                     "");
-			button.setText("Done, thanks for sharing your image");
+			
 
 			Handler handler = new Handler(); 
 		    handler.postDelayed(new Runnable() { 
@@ -304,5 +315,21 @@ public class UploadToCommonsActivity extends Activity {
 	       
 		
 	}
+
+	 
+	/**
+	 * @return the doOverwrite
+	 */
+	public boolean isDoOverwrite() {
+		return doOverwrite;
+	}
+
+	/**
+	 * @param doOverwrite the doOverwrite to set
+	 */
+	public void setDoOverwrite(boolean doOverwrite) {
+		this.doOverwrite = doOverwrite;
+	}
+	
 
 }
