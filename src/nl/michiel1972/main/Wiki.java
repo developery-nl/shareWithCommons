@@ -28,12 +28,8 @@ import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
 import javax.security.auth.login.*; // useful exception types
 
-
-import android.app.ProgressDialog;
-import android.nfc.FormatException;
 import android.util.AndroidException;
-import android.widget.Button;
-import android.widget.Toast;
+
 
 /**
  *  This is a somewhat sketchy bot framework for editing MediaWiki wikis.
@@ -863,13 +859,14 @@ public class Wiki implements Serializable
      *  @throws IOException if a network error occurs
      *  @see #logout
      */
-    public synchronized void login(String username, String password) throws IOException, FormatException
+    public synchronized boolean login(String username, String password) throws IOException
     {
         // @revised 0.11 to remove screen scraping
         // @revised 0.23 readded screen scraping
 
         // Scrape a login token from Special:Userlogin. Login tokens should be
         // available through prop=info !
+    	boolean result = false;
         String blah = fetch(base + "Special:Userlogin", "login", true);
         int a = blah.indexOf("wpLoginToken") + 21;
         int b = blah.indexOf('\"', a);
@@ -905,33 +902,45 @@ public class Wiki implements Serializable
         in.close();
         if (success)
         {
+        	result =true;
             user = new User(username);
             boolean apihighlimit = user.isAllowedTo("apihighlimits");
             max = apihighlimit ? 5000 : 500;
-            Toast.makeText(uplActivity,"Login successfull", Toast.LENGTH_SHORT).show();
-            
+
             log(Level.INFO, "Successfully logged in as " + username + ", highLimit = " + apihighlimit, "login");
         }
         else
         {
-        	Toast.makeText(uplActivity,"Failed to login", Toast.LENGTH_SHORT).show();
-             
+            uplActivity.setEndingMessage("Failed to log in as " + username);
             log(Level.WARNING, "Failed to log in as " + username, "login");
+
             try
             {
-                Thread.sleep(20000); // to prevent brute force
+                Thread.sleep(2000); // to prevent brute force
             }
             catch (InterruptedException e)
             {
                 // nobody cares
+            	  uplActivity.setEndingMessage("Failed to log in");
+                  
             }
             // test for some common failure reasons
-            if (line.contains("WrongPass") || line.contains("WrongPluginPass"))
-                throw new FormatException("Login failed: incorrect password.");
-            else if (line.contains("NotExists"))
-                throw new FormatException("Login failed: user does not exist.");
-            throw new FormatException("Login failed: unknown reason.");
-        }
+            if (line.contains("WrongPass") || line.contains("WrongPluginPass")){
+            	log(Level.WARNING,"Login failed: incorrect password.","login");
+            	uplActivity.setEndingMessage("Login failed: incorrect password");
+            	
+            }   else if (line.contains("NotExists")) {
+            	log(Level.WARNING,"Login failed: user does not exist.","login");
+            	uplActivity.setEndingMessage("Login failed: user not exist");
+                
+            	
+            } else {
+            	log(Level.WARNING,"Login failed: unknown reason.","login");
+            	uplActivity.setEndingMessage("Login failed: unknown reason");
+               
+            }
+           }
+        return result;
     }
 
     /**
@@ -3115,14 +3124,17 @@ public class Wiki implements Serializable
         // check for log in
         if (user == null || !user.isAllowedTo("upload"))
         {
-            Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
-            
-             return;
+        	//Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
+            uplActivity.setEndingMessage("Can not upload. No permission");
+            //uplActivity.nicelyEndApp("Can not upload. No permission");
         }
         try {
 			statusCheck();
 		} catch (CRLException e1) {
 			// TODO Auto-generated catch block
+			   uplActivity.setEndingMessage("Can not upload. Error status check");
+		         
+			// uplActivity.nicelyEndApp("Can not upload. Error status check");
 			e1.printStackTrace();
 		}
 
@@ -3135,11 +3147,12 @@ public class Wiki implements Serializable
 		try {
 			if (!checkRights(level, false))
 				{
-					Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
-
-				}
+				   uplActivity.setEndingMessage("Can not upload. No permission");
+				      
+					}
 		} catch (CRLException e1) {
-			// TODO Auto-generated catch block
+			   uplActivity.setEndingMessage("Can not upload. No permission");
+				
 			e1.printStackTrace();
 		}
 
@@ -3149,12 +3162,10 @@ public class Wiki implements Serializable
         //handle existing file
         
         if (imageExists) {
-        	Toast.makeText(uplActivity,"Filename already exist", Toast.LENGTH_LONG).show();
-        	
+        	 uplActivity.setEndingMessage("Filename already exist, not uploaded.");
+
         	
         	if (!uplActivity.isDoOverwrite()) { 
-        		
-
         		
         		return; //skip upload process
         	}
@@ -3280,22 +3291,22 @@ public class Wiki implements Serializable
             BufferedReader in = new BufferedReader(new InputStreamReader(
                 zipped ? new GZIPInputStream(connection.getInputStream()) : connection.getInputStream(), "UTF-8"));
             log(Level.INFO, "out response input", "upload");
+            uplActivity.setEndingMessage("Upload to Wikimedia Commons done!");
             checkErrors(in.readLine(), "upload");
 
             // TODO: check for specific errors here
             in.close();
             
-            final Button button = (Button) uplActivity.findViewById(R.id.button1);
-            button.setText("Done, thanks for sharing your image");
             
             
         }
         catch (IOException e)
         {
             // don't bother retrying - uploading is a pain
-        	Toast.makeText(uplActivity,"Upload error", Toast.LENGTH_SHORT).show();
         	log(Level.INFO, "out response ioexception", "upload");
             logger.logp(Level.SEVERE, "Wiki", "upload()", "[" + domain + "] EXCEPTION:  ", e);
+        	uplActivity.setEndingMessage("Upload error. Stopped");
+
             throw e;
         }
 
@@ -3309,6 +3320,7 @@ public class Wiki implements Serializable
         catch (InterruptedException e)
         {
             // nobody cares
+        	//uplActivity.nicelyEndApp("Upload error. Stopped.");
         }
     }
 
@@ -6332,7 +6344,7 @@ public class Wiki implements Serializable
     protected void checkErrors(String line, String caller) throws IOException, LoginException
     {
         // empty response from server
-        if (line.isEmpty())
+        if (line.isEmpty()) 
             throw new UnknownError("Received empty response from server!");
         // successful
         if (line.contains("result=\"Success\""))
@@ -6346,6 +6358,7 @@ public class Wiki implements Serializable
         // blocked! (note here the \" in blocked is deliberately missing for emailUser()
         if (line.contains("error code=\"blocked") || line.contains("error code=\"autoblocked\""))
         {
+        	uplActivity.setEndingMessage("Upload failed, user blocked");
             log(Level.SEVERE, "Cannot " + caller + " - user is blocked!.", caller);
             try {
 				throw new AndroidException("Current user is blocked!");
@@ -6368,6 +6381,7 @@ public class Wiki implements Serializable
         // database lock (automatic retry)
         if (line.contains("error code=\"readonly\""))
         {
+        	uplActivity.setEndingMessage("Upload failed, database locked");
             log(Level.WARNING, "Database locked!", caller);
             throw new HttpRetryException("Database locked!", 503);
         }

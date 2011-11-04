@@ -1,8 +1,10 @@
 package nl.michiel1972.main;
 
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -10,41 +12,294 @@ import javax.security.auth.login.LoginException;
 
 import nl.michiel1972.main.R;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.nfc.FormatException;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.provider.MediaStore;
+
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 public class UploadToCommonsActivity extends Activity {
 	
 	
+	private Bundle extras;
+	private EditText edittext1;
+	private EditText edittext2;
+	private EditText edittext3;
+	private EditText edittext4;
+	private EditText edittext5;
+	private Button buttonStart;
+	private Button buttonCancel;
+	private Uri uri;
+	private ProgressDialog mProgressDialog;
+	
 	private String username="";
 	private String password="";
+	private String filenameprefix="";
+	private String categoryname="";
 	private String filename="";
+	
 	private String detailinfo="";
 	private String licenseinfo="";
+	private String imageDescription="";
 	private String exif_datetime="";
 	private Wiki theWiki;
 	private byte[] data;
 	private boolean doOverwrite=false;
 
 
+	private String endingMessage="";
+	
+	public String getEndingMessage() {
+		return endingMessage;
+	}
+
+	public void setEndingMessage(String endingMessage) {
+		this.endingMessage = endingMessage;
+	}
+
+	/*
+	 * AsyncTask enables proper and easy use of the UI thread.
+	 * This class allows to perform background operations and publish results on the UI thread
+	 * without having to manipulate threads and/or handlers.
+	 * An asynchronous task is defined by a computation that runs on a background thread and whose result is published on the UI thread. An asynchronous task is defined by 3 generic types, called Params, Progress and Result, and 4 steps, called onPreExecute, doInBackground, onProgressUpdate and onPostExecute.
+	 */
+	private class UploadImageTask extends AsyncTask<Void, Void, Void> {
+
+	
+		@Override
+		protected void onPreExecute() {
+
+			// Query gallery for camera picture via
+			// Android ContentResolver interface
+			ContentResolver cr = getContentResolver();
+			InputStream is = getInputStreamImage(uri, cr);
+			
+			exif_datetime = getFormatedEXIFdate(uri);
+			
+			getUserInputdata();
+			checkUpdatedEdits();
+			
+
+			mProgressDialog = ProgressDialog.show(UploadToCommonsActivity.this, "",
+					"Please wait...", true);
+		}
+
+		/**
+		 * Get input stream image
+		 * @param uri
+		 * @param cr
+		 * @return
+		 */
+		private InputStream getInputStreamImage(Uri uri, ContentResolver cr) {
+			InputStream is = null;
+			try {
+				is = cr.openInputStream(uri);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			// Get binary bytes for encode of image file
+			try {
+				data = getBytesFromFile(is);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return is;
+		}
+
+		/**
+		 * Get formated EXIF data
+		 * @param uri
+		 * @return
+		 */
+		private String getFormatedEXIFdate(Uri uri) {
+			// Get Exif date, convert into correct format
+			String imagefile = getRealPathFromURI(uri);
+		    ExifInterface exifInterface = null;
+			try {
+				exifInterface = new ExifInterface(imagefile);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			exif_datetime = exifInterface.getAttribute(ExifInterface.TAG_DATETIME);
+			
+			SimpleDateFormat dateParser = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+			SimpleDateFormat dateConverter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Date d = null;
+			try {
+				d = dateParser.parse(exif_datetime);
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return dateConverter.format(d);
+		}
+
+	    public void onProgressUpdate(String... args){
+	    	// nicelyEndApp(args[0]);
+	    	Toast.makeText(UploadToCommonsActivity.this, args[0], Toast.LENGTH_LONG).show();
+	    }
+	    
+	    @Override
+	    protected void onPostExecute(Void result) {
+	    	 mProgressDialog.dismiss();
+	     	 Toast.makeText(UploadToCommonsActivity.this, endingMessage, Toast.LENGTH_LONG).show();
+	     	 buttonStart.setClickable(true);
+	     	 endingMessage="";
+	    }
+	    
+		@Override
+		//In background do the upload
+		protected Void doInBackground(Void... params) {
+			startProcessingUpload(this);
+			return null;
+		}
+
+
+	 }
+	
+	
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		
+		    MenuInflater inflater = getMenuInflater();
+		    inflater.inflate(R.menu.menu, menu);
+		    return true;
+		
+	}
+	
+	/**
+	 * Give \ suggest filename
+	 * @return
+	 */
+	public String suggestFilename() {
+		
+		//Get latest username entry
+		username = edittext1.getText().toString().trim();
+		String filename_suggestion =  username+"_"+uri.getLastPathSegment()+".jpg";
+		
+		if (filenameprefix.length()>2) {
+			filename_suggestion =  filenameprefix+"_"+uri.getLastPathSegment()+".jpg";
+			
+		}
+		edittext3.setText(filename_suggestion);
+		return filename_suggestion;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    // Handle item selection
+	    switch (item.getItemId()) {
+	    case R.id.fileprefix:
+	        changeDefaultFilePrefix();
+	        return true;
+	    case R.id.category:
+	        changeDefaultCategory();
+	        return true;
+	    default:
+	        return super.onOptionsItemSelected(item);
+	    }
+	}
+	
+	 	
+	/**
+	 * MenuOption: Change default file prefix
+	 */
+	private void changeDefaultFilePrefix() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+		alert.setTitle("Default filename prefix");
+		alert.setMessage("Enter a default filename prefix for your future image uploads. Automatically, a suffix with .jpg will be added.");
+
+		// Set an EditText view to get user input 
+		final EditText input = new EditText(this);
+		input.setText(filenameprefix);
+		alert.setView(input);
+
+		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+		public void onClick(DialogInterface dialog, int whichButton) {
+		  String value = input.getText().toString().trim();
+		  // Do something with value!
+		  if (value.length()>2) {
+			  filenameprefix = value;
+			  SavePreferences("MEM11", value);
+			  suggestFilename();
+		  } else {
+			  
+		   }
+		  }
+		});
+
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+		  public void onClick(DialogInterface dialog, int whichButton) {
+		    // Canceled.
+		  }
+		});
+
+		alert.show();
+		
+	}
+
+
+	/**
+	 * MenuOption: Change default category
+	 */
+	private void changeDefaultCategory() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+
+		alert.setTitle("Default category");
+		alert.setMessage("Enter a default category name for your future image uploads. Wiki syntax is added by the app");
+
+		// Set an EditText view to get user input 
+		final EditText input = new EditText(this);
+		input.setText(categoryname);
+		alert.setView(input);
+
+		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+		public void onClick(DialogInterface dialog, int whichButton) {
+		  String value = input.getText().toString().trim();
+		  // Do something with value!
+		  if (value.length()>2) {
+			  categoryname = value;
+			  SavePreferences("MEM12", value);
+			  suggestFilename();
+		  } else {
+			  
+		   }
+		  }
+		});
+
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+		  public void onClick(DialogInterface dialog, int whichButton) {
+		    // Canceled.
+		  }
+		});
+
+		alert.show();
+		
+	}
+	
 	/* Called when the activity is first created. This is shown only once with empty parameters 
 	 * (non-Javadoc)
 	 * @see android.app.Activity#onCreate(android.os.Bundle)
@@ -52,83 +307,69 @@ public class UploadToCommonsActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-		setContentView(R.layout.main); 
 
 		Intent intent = getIntent();
 		Bundle extras = intent.getExtras();
 		String action = intent.getAction();
- 
-		
-		
+
+ 		
 		// if this is from the share menu
 		if (Intent.ACTION_SEND.equals(action))
 		{
+			setContentView(R.layout.main); 
+
+			this.extras = extras;
 			if (extras.containsKey(Intent.EXTRA_STREAM))
 			{
 				try
 				{
-					
-					
 					// Hide standard keyboard
 					getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+				
+					// Get input field locations
+					edittext1 = (EditText) this.findViewById(R.id.editText1);
+					edittext2 = (EditText) this.findViewById(R.id.editText2);
+					edittext3 = (EditText) this.findViewById(R.id.editText3);
+					edittext4 = (EditText) this.findViewById(R.id.editText4);
+					edittext5 = (EditText) this.findViewById(R.id.editText5);
+					buttonStart = (Button) findViewById(R.id.button1);
+					buttonCancel = (Button) findViewById(R.id.button2);
 					
-					// Previously stored settings if any
-					LoadPreferences();
 					
 					// Get resource path from intent
-					Uri uri = (Uri) extras.getParcelable(Intent.EXTRA_STREAM);
+					uri = (Uri) extras.getParcelable(Intent.EXTRA_STREAM);
+					
+					// Get user values previous known
+					loadPreferences();
 
-					// Query gallery for camera picture via
-					// Android ContentResolver interface
-					ContentResolver cr = getContentResolver();
-					InputStream is = cr.openInputStream(uri);
+					suggestFilename();
 					
-					// Get binary bytes for encode of image file
-					data = getBytesFromFile(is);
+					// Action starts after BUTTON click. Settings can not be changed anymore.
 					
-					// Get Exif date, convert into correct format
-					String imagefile = getRealPathFromURI(uri);
-				    ExifInterface exifInterface = new ExifInterface(imagefile);
-					exif_datetime = exifInterface.getAttribute(ExifInterface.TAG_DATETIME);
-					
-					SimpleDateFormat dateParser = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
-					SimpleDateFormat dateConverter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-					Date d = dateParser.parse(exif_datetime);
-					exif_datetime = dateConverter.format(d);
-					
-					// Suggest image filename using original filename plus username prefix
-					EditText temp = (EditText) this.findViewById(R.id.editText1);
-					username = temp.getText().toString().trim();
-					String filename_suggestion =  "Img_by_"+username+"_"+uri.getLastPathSegment()+".jpg";
-					temp = (EditText) this.findViewById(R.id.editText3);
-					temp.setText(filename_suggestion);
-					
-					// Suggest description
-					//temp = (EditText) this.findViewById(R.id.editText4);
-					//temp.setText("");
-					
-					// Suggest license template - to be edited further if wanted by user
-					temp = (EditText) this.findViewById(R.id.editText5);
-					temp.setText("{{self|cc-by-sa-3.0|GFDL}}");
-
-					// BUTTON CLICK
-					final Button button = (Button) findViewById(R.id.button1);
-			         button.setOnClickListener(new View.OnClickListener() {
+			         buttonStart.setOnClickListener(new View.OnClickListener() {
 			             public void onClick(View v) {
+			            	 
 			                 // Perform action on click
-			            	 button.setClickable(false);
-			            	 button.setText("Busy uploading..please wait");
-			            	 try {
-								startProcessingUpload();
-							} catch (LoginException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
+			            	 
+			            	 buttonStart.setClickable(false);
+			           
+							 new UploadImageTask().execute();
+						
 			             }
 
 
 			         });
-			         
+			         buttonCancel.setOnClickListener(new View.OnClickListener() {
+			             public void onClick(View v) {
+			            	 
+			                 // Perform action on click
+			            	 
+			            	 nicelyEndApp("Cancelled upload to Wikimedia Commons");
+						
+			             }
+
+			         });
+				        
 					return;
 				} catch (Exception e)
 				{
@@ -137,12 +378,26 @@ public class UploadToCommonsActivity extends Activity {
 
 			} else if (extras.containsKey(Intent.EXTRA_TEXT))
 			{
-				return;
+				 nicelyEndApp("Text can not be 'Shared' ");
+					
 			}
+		} else {
+			//started at init or other
+			 nicelyEndApp("Use 'Share via' menu with images to use the upload function");
 		}
 
 	}
 
+    /**
+     * End app with message
+     * @param message
+     */
+    public void nicelyEndApp(String message){
+		 Toast.makeText(this,message, Toast.LENGTH_LONG).show();
+ 		 finish();
+    }
+    
+    
     /**
      * Get real path from Uri
      * @param contentUri
@@ -211,71 +466,132 @@ public class UploadToCommonsActivity extends Activity {
        }
     
     /**
-     * Load settings locally
+     * Load settings locally once at startup
      */
-    private void LoadPreferences(){
+    private void loadPreferences(){
         SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         String strSavedMem1 = sharedPreferences.getString("MEM1", "unknown");
         String strSavedMem2 = sharedPreferences.getString("MEM2", "unknown");
-        String strSavedMem5 = sharedPreferences.getString("MEM5", "unknown");
-        //Give found preferences if username was defined
-        if (!strSavedMem1.equals("unknown")){
-          EditText temp = (EditText) this.findViewById(R.id.editText1);
-          temp.setText(strSavedMem1);
-          temp = (EditText) this.findViewById(R.id.editText2);
-          temp.setText(strSavedMem2);
-          temp = (EditText) this.findViewById(R.id.editText5);
-          temp.setText(strSavedMem5);
-         }
+        String strSavedMem5 = sharedPreferences.getString("MEM5", "");
+        String strSavedMem11 = sharedPreferences.getString("MEM11", "");
+        String strSavedMem12 = sharedPreferences.getString("MEM12", "");
+        filenameprefix = strSavedMem11;
+        categoryname = strSavedMem12; 
+  
+        //Give found preferences ONLY if value was defined
+        if (!strSavedMem1.equals("unknown")) edittext1.setText(strSavedMem1);
+        if (!strSavedMem2.equals("unknown")) edittext2.setText(strSavedMem2);
+        if (strSavedMem5.equals("")) {
+        	edittext5.setText("{{self|cc-by-sa-3.0|GFDL}}");
+             } else {
+            	 edittext5.setText(strSavedMem5);
+             }
+           
        }
     
     
     /**
-     * Start uploading
+     * Start uploading, start button click called from asynch task
+     * @param uploadImageTask 
      * @throws LoginException 
      */
-	protected void startProcessingUpload() throws LoginException {
+	protected void startProcessingUpload(UploadImageTask uploadImageTask) {
 		
 		theWiki= new Wiki(this);
+		
+		//Try Login
+		boolean succesLogin = false;
+		try {
+			succesLogin = theWiki.login(username, password);
+		} catch (IOException e) {
+			
+			nicelyEndApp("Login error");
+			e.printStackTrace();
+		}
+			
+		
+		if (succesLogin) {
+			Log.i(this.getClass().getName(), "login ok");
+			
+						
+			//upload file using bytes
+			try {
+				theWiki.uploadAndroid(data, 
+				        filename, 
+				        imageDescription, 
+				        "");
+			} catch (LoginException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+			
+		} else {
+			Log.i(this.getClass().getName(), "login failed");
+		}
 				
+	    
+		
+	}
 
+
+	/*
+	 * Get user data input used for description of file upload
+	 */
+	private void getUserInputdata() {
+        //Get user data (data may be edited after suggestions at startup)
+		username = edittext1.getText().toString().trim();
+		password = edittext2.getText().toString().trim();
+		filename = edittext3.getText().toString().trim();
+		detailinfo = edittext4.getText().toString().trim();		
+		licenseinfo = edittext5.getText().toString().trim();
+		SavePreferences("MEM5", licenseinfo);
+		String categorystring="";
+		if (categoryname.length()>2) {
+			categorystring= "[[Category:"+categoryname+"]]";
+		}
 		
-        //Get user data (data may be edited after suggestions)
-		EditText temp = (EditText) this.findViewById(R.id.editText1);
-		username = temp.getText().toString().trim();
-		temp = (EditText) this.findViewById(R.id.editText2);
-		password = temp.getText().toString().trim();
-		Button button = (Button) findViewById(R.id.button1);
-		temp = (EditText) this.findViewById(R.id.editText3);
-		filename = temp.getText().toString().trim();
-		temp = (EditText) this.findViewById(R.id.editText4);
-		detailinfo = temp.getText().toString().trim();		
-		temp = (EditText) this.findViewById(R.id.editText5);
-		licenseinfo = temp.getText().toString().trim();
+        //Complete contents description
+		imageDescription= getImageDescription(username,filename,detailinfo,licenseinfo, categorystring);
+	}
+
+	/**
+	 * Check if login is changed and update if needed
+	 */
+	private void checkUpdatedEdits() {
 		
-		//check if user id settings are changed
 		//button click implies user thinks text fields are correctly updated
 		SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         String strSavedMem1 = sharedPreferences.getString("MEM1", "unknown");
-		if (!username.equals(strSavedMem1)){ 
-			 Toast.makeText(this,"Login data stored", Toast.LENGTH_SHORT).show();
+        String strSavedMem2 = sharedPreferences.getString("MEM2", "unknown");
+		
+        if ((!username.equals(strSavedMem1)) || (!password.equals(strSavedMem2))) { 
+			 Toast.makeText(this,"Login data updated", Toast.LENGTH_SHORT).show();
 		         
 		     SavePreferences("MEM1", username);
 		     SavePreferences("MEM2", password);
 		     SavePreferences("MEM5", licenseinfo);
 		}
 		
-		//Try Login
-		try {
-			theWiki.login(username, password);
-			Log.i(this.getClass().getName(), "login ok");
-				
-			//Contents description
-			
-			String description= 
-					"==Summary==\n" +
+	}
+
+	/**
+	 * Get and construct image description wikipedia formated
+	 * @param username2
+	 * @param filename2
+	 * @param detailinfo2
+	 * @param licenseinfo2
+	 * @return
+	 */
+	private String getImageDescription(String username2, String filename2,
+			String detailinfo2, String licenseinfo2, String categorystring) {
+		      return "==Summary==\n" +
 				  "{{Information\n" +
-					"|Description= " + detailinfo +
+					"|Description= " + detailinfo + "\n" +
 					"|Source= {{own}}\n" + 
 					"|Date= " + exif_datetime + "\n" +
 					"|Author= [[User:" +username +"|"+ username + "]]\n" +
@@ -284,39 +600,11 @@ public class UploadToCommonsActivity extends Activity {
 					"}}\n" +
 					"{{Images uploaded with Android}}\n" +
 					"==Licensing==\n" +
-					licenseinfo +"\n"
+					licenseinfo +"\n" +
+					categorystring
 					;
-			
-			//upload file bytes
-			theWiki.uploadAndroid(data, 
-                    filename, 
-                    description, 
-                    "");
-			
-
-			Handler handler = new Handler(); 
-		    handler.postDelayed(new Runnable() { 
-		         public void run() { 
-		        	 finish(); 
-		         } 
-		    }, 2000); 
-			
-			
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			Log.e(this.getClass().getName(), e.toString());
-		} catch (FormatException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			Log.e(this.getClass().getName(), e.toString());
-		}
-	       
-		
 	}
 
-	 
 	/**
 	 * @return the doOverwrite
 	 */
@@ -330,6 +618,7 @@ public class UploadToCommonsActivity extends Activity {
 	public void setDoOverwrite(boolean doOverwrite) {
 		this.doOverwrite = doOverwrite;
 	}
+	
 	
 
 }

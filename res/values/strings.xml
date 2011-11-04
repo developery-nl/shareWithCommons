@@ -6,7 +6,8 @@
     <string name="hint_userlogin">Username</string>
     <string name="label_password">Password</string>
     <string name="hint_password">Password</string>
-    <string name="label_startbutton">Start uploading..</string>
+    <string name="label_startbutton">Start upload</string>
+    <string name="label_cancelbutton">Cancel</string>
     <string name="label_uploaddetails">Filename</string>
     <string name="hint_filename">new filename.jpg</string>
     <string name="label_description">Description</string>
