@@ -1,22 +1,29 @@
 
 
-Install
+Install as Android app
 --------
 
-After installing the android apk, close the app. 
-A new 'share' option "Wikimedia Commons" is then available within the menu options when viewing a stored image on the mobile. From here, the app is started automatically when selected. Do not start the app from another location.
+1. Note that your mobile phone setting must allow non-market applications.
+
+2. After installing the android .apk, a new 'share via' option "Wikimedia Commons" is available within the menu options when viewing a stored image on the mobile. 
+
 
 
 How to use
 ----------
-Chose a locally stored image on the SD card or memory picture (from the gallery), or just view the latest picture you made. Using the share menu button, and selecting Commons, the image can be shared (uploaded) to Commons. A correct username and password must be provided the first time only. Login settings are stored locally.
 
-A simple file name is suggested (username plus local filename), and a file description can be entered (default empty). Existing files on Commons with the same proposed filename are not overwritten.
+3. Go to the gallery and select a picture or make a picture. Choose the 'Share via' menu. Select Wikimedia Commons. From here, the app is started automatically. Do not start the app from another location.
 
-The app is closed directly after an upload.
+Note that only locally stored images on the SD card or memory picture (from the gallery) can be uploaded.
+
+4. A correct username and password must be provided the first time. Login settings are stored locally when pressing the Start button.
+
+A simple file name is suggested (username plus local filename), and a file description can be entered (default empty). Also, with the Menu-button, a default file prefix and category can be set for future uploads.
+ 
+5. When the Start button is pressed, the login and upload process will start. Note that existing files on Commons with the same proposed filename are not overwritten.
 
 
-Requirement
+Requirements
 -----------
 Android 2.3.4 +
 api level 10 +
@@ -30,8 +37,9 @@ Files will have the category:Images uploaded by Android app included by the inse
 
 Status
 --------
-november 2, 2011: Minimal error handling, basic functionality works.
 
+november 2, 2011: Minimal error handling, basic functionality works. @Michiel1972
+november 4, 2011: Basic error handling added. Extra settings added. @Michiel1972
  
 License
 -------
