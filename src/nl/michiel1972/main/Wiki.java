@@ -3124,22 +3124,18 @@ public class Wiki implements Serializable
         // check for log in
         if (user == null || !user.isAllowedTo("upload"))
         {
-        	//Toast.makeText(uplActivity,"Can not upload. No permission", Toast.LENGTH_SHORT).show();
             uplActivity.setEndingMessage("Can not upload. No permission");
-            //uplActivity.nicelyEndApp("Can not upload. No permission");
         }
         try {
 			statusCheck();
 		} catch (CRLException e1) {
-			// TODO Auto-generated catch block
-			   uplActivity.setEndingMessage("Can not upload. Error status check");
+		    uplActivity.setEndingMessage("Can not upload. Error status check");
 		         
-			// uplActivity.nicelyEndApp("Can not upload. Error status check");
 			e1.printStackTrace();
 		}
 
         // get exists, protection and token
-        HashMap<String, Object> info = getPageInfo("File:" + filename);
+        HashMap<String, Object> info = getPageInfo("File:" + filename2);
         int level = (Integer)info.get("protection");
         boolean imageExists = (Boolean)info.get("exists");
         
@@ -3148,24 +3144,19 @@ public class Wiki implements Serializable
 			if (!checkRights(level, false))
 				{
 				   uplActivity.setEndingMessage("Can not upload. No permission");
-				      
 					}
-		} catch (CRLException e1) {
-			   uplActivity.setEndingMessage("Can not upload. No permission");
-				
-			e1.printStackTrace();
+				} catch (CRLException e1) {
+			       uplActivity.setEndingMessage("Can not upload. No permission");
+			       e1.printStackTrace();
 		}
 
         String wpEditToken = (String)info.get("token");
-
-        
+       
         //handle existing file
         
         if (imageExists) {
         	 uplActivity.setEndingMessage("Filename already exist, not uploaded.");
-
-        	
-        	if (!uplActivity.isDoOverwrite()) { 
+        	 if (!uplActivity.isDoOverwrite()) { 
         		
         		return; //skip upload process
         	}
@@ -3184,7 +3175,6 @@ public class Wiki implements Serializable
         // this is how we do multipart post requests, by the way
         // see also: http://www.w3.org/TR/html4/interact/forms.html#h-17.13.4.2
         String url = apiUrl + "action=upload";
-        
         
         String encodedtoken = URLEncoder.encode(wpEditToken, "UTF-8")+"%2B%5C";
         

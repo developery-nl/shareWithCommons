@@ -199,6 +199,7 @@ public class UploadToCommonsActivity extends Activity {
 		username = edittext1.getText().toString().trim();
 		String filename_suggestion =  username+"_"+uri.getLastPathSegment()+".jpg";
 		
+		//if user did set a default prexix
 		if (filenameprefix.length()>2) {
 			filename_suggestion =  filenameprefix+"_"+uri.getLastPathSegment()+".jpg";
 			
@@ -230,7 +231,7 @@ public class UploadToCommonsActivity extends Activity {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 
 		alert.setTitle("Default filename prefix");
-		alert.setMessage("Enter a default filename prefix for your future image uploads. Automatically, a suffix with .jpg will be added.");
+		alert.setMessage("Enter a default filename prefix for your future image uploads. The suffix with picture number and extension will be added automatically.");
 
 		// Set an EditText view to get user input 
 		final EditText input = new EditText(this);
@@ -242,8 +243,19 @@ public class UploadToCommonsActivity extends Activity {
 		  String value = input.getText().toString().trim();
 		  // Do something with value!
 		  if (value.length()>2) {
-			  filenameprefix = value;
-			  SavePreferences("MEM11", value);
+			  filenameprefix = value.trim();
+			  String corString;
+			  corString=filenameprefix.replace(':','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('?','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('\\','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('/','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('*','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('%','_');filenameprefix=corString;;
+			  corString=filenameprefix.replace('"','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('|','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('<','_');filenameprefix=corString;
+			  corString=filenameprefix.replace('>','_');filenameprefix=corString;
+			  SavePreferences("MEM11", filenameprefix);
 			  suggestFilename();
 		  } else {
 			  
@@ -269,7 +281,7 @@ public class UploadToCommonsActivity extends Activity {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 
 		alert.setTitle("Default category");
-		alert.setMessage("Enter a default category name for your future image uploads. Wiki syntax is added by the app");
+		alert.setMessage("Enter a default category name for your future image uploads. Wiki syntax is added automatically.");
 
 		// Set an EditText view to get user input 
 		final EditText input = new EditText(this);
@@ -383,7 +395,7 @@ public class UploadToCommonsActivity extends Activity {
 			}
 		} else {
 			//started at init or other
-			 nicelyEndApp("Use 'Share via' menu with images to use the upload function");
+			 nicelyEndApp("Use the 'Share via' menu when viewing an image to use the upload function");
 		}
 
 	}
@@ -515,6 +527,8 @@ public class UploadToCommonsActivity extends Activity {
 			
 						
 			//upload file using bytes
+			String newString = filename.replaceAll("\\s+", "_");
+			filename=newString;
 			try {
 				theWiki.uploadAndroid(data, 
 				        filename, 
