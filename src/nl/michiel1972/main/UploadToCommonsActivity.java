@@ -1,6 +1,26 @@
 package nl.michiel1972.main;
 
+/*
+ * Copyright (C) 2011 M.Minderhoud <michiel1972@gmail.com>
 
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to
+
+Free Software Foundation, Inc.
+51 Franklin Street, Fifth Floor
+Boston, MA   02110-1301, USA.
+
+ */
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,11 +35,14 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.media.ExifInterface;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -295,7 +318,7 @@ public class UploadToCommonsActivity extends Activity {
 		  if (value.length()>2) {
 			  categoryname = value;
 			  SavePreferences("MEM12", value);
-			  suggestFilename();
+			  
 		  } else {
 			  
 		   }
@@ -501,6 +524,24 @@ public class UploadToCommonsActivity extends Activity {
            
        }
     
+    private boolean haveNetworkConnection()
+    {
+        boolean haveConnectedWifi = false;
+        boolean haveConnectedMobile = false;
+
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo[] netInfo = cm.getAllNetworkInfo();
+        for (NetworkInfo ni : netInfo)
+        {
+            if (ni.getTypeName().equalsIgnoreCase("WIFI"))
+                if (ni.isConnected())
+                    haveConnectedWifi = true;
+            if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
+                if (ni.isConnected())
+                    haveConnectedMobile = true;
+        }
+        return haveConnectedWifi || haveConnectedMobile;
+    }
     
     /**
      * Start uploading, start button click called from asynch task
@@ -511,13 +552,21 @@ public class UploadToCommonsActivity extends Activity {
 		
 		theWiki= new Wiki(this);
 		
+		//Connected?
+		boolean succesConnection = haveNetworkConnection();
+		if (!succesConnection) {
+			endingMessage="No internet connection";
+			return;
+				}
+			
+			
 		//Try Login
 		boolean succesLogin = false;
 		try {
 			succesLogin = theWiki.login(username, password);
 		} catch (IOException e) {
 			
-			nicelyEndApp("Login error");
+			//nicelyEndApp("Login error");
 			e.printStackTrace();
 		}
 			

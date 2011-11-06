@@ -1,7 +1,12 @@
+Install source code
+----------------------
+The source code is in java. Use Eclipse to import all the files in an android project. 
+Note that there are no special library dependencies.
 
 
 Install as Android app
---------
+-----------------------
+The apk file can be found at https://github.com/michiel1972/shareWithCommons/downloads
 
 1. Note that your mobile phone setting must allow non-market applications.
 
@@ -9,7 +14,7 @@ Install as Android app
 
 
 
-How to use
+How to use the app
 ----------
 
 3. Go to the gallery and select a picture or make a picture. Choose the 'Share via' menu. Select Wikimedia Commons. From here, the app is started automatically. Do not start the app from another location.
@@ -40,6 +45,7 @@ Status
 
 november 2, 2011: Minimal error handling, basic functionality works. @Michiel1972
 november 4, 2011: Basic error handling added. Extra settings added. @Michiel1972
+november 6, 2011: Check if internet connection exist, stop upload otherwise. @Michiel1972
  
 License
 -------

@@ -1,6 +1,6 @@
 /**
  *  @(#)Wiki.java 0.24 05/09/2011
- *  Copyright (C) 2007 - 2011 MER-C and contributors
+ *  Copyright (C) 2007 - 2011 MER-C , Michiel1972 and contributors
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -39,7 +39,7 @@ import android.util.AndroidException;
  *  (1.18 SVN), otherwise some functions may not work.
  *  
  *  Note that for Android implementation only uploadAndroid() and related methods 
- *  are checked/changed for use with Android.
+ *  are checked/changed for use with Android. 
  *  
  *  TODO code clean up of unused functions
  *  
