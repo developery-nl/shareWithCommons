@@ -3144,9 +3144,11 @@ public class Wiki implements Serializable
 			if (!checkRights(level, false))
 				{
 				   uplActivity.setEndingMessage("Can not upload. No permission");
+				   return;
 					}
 				} catch (CRLException e1) {
 			       uplActivity.setEndingMessage("Can not upload. No permission");
+			      
 			       e1.printStackTrace();
 		}
 

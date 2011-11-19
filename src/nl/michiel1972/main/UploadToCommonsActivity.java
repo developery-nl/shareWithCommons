@@ -156,6 +156,7 @@ public class UploadToCommonsActivity extends Activity {
 		 * @return
 		 */
 		private String getFormatedEXIFdate(Uri uri) {
+			String result="";
 			// Get Exif date, convert into correct format
 			String imagefile = getRealPathFromURI(uri);
 		    ExifInterface exifInterface = null;
@@ -167,16 +168,20 @@ public class UploadToCommonsActivity extends Activity {
 			}
 			exif_datetime = exifInterface.getAttribute(ExifInterface.TAG_DATETIME);
 			
-			SimpleDateFormat dateParser = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
-			SimpleDateFormat dateConverter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-			Date d = null;
-			try {
-				d = dateParser.parse(exif_datetime);
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (exif_datetime!=null){
+				SimpleDateFormat dateParser = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+				SimpleDateFormat dateConverter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				Date d = null;
+				try {
+					d = dateParser.parse(exif_datetime);
+				} catch (ParseException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				result= dateConverter.format(d);
 			}
-			return dateConverter.format(d);
+
+			return result;
 		}
 
 	    public void onProgressUpdate(String... args){
@@ -374,6 +379,9 @@ public class UploadToCommonsActivity extends Activity {
 					// Get resource path from intent
 					uri = (Uri) extras.getParcelable(Intent.EXTRA_STREAM);
 					
+					//Check if share is called from SD card image
+					checkValidUri(uri);
+					
 					// Get user values previous known
 					loadPreferences();
 
@@ -423,7 +431,25 @@ public class UploadToCommonsActivity extends Activity {
 
 	}
 
-    /**
+    private boolean checkValidUri(Uri contentUri) {
+		
+       boolean result= true;
+       String[] proj = { MediaStore.Images.Media.DATA };
+       Cursor cursor = managedQuery(contentUri, proj, null, null, null);
+       int column_index = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
+     
+       if (column_index==-1) {
+	      result = false;
+	      nicelyEndApp("Cancelled. Image to share must be on memory card!");
+			
+	      } 
+         else {
+		   result=true;
+	   }
+       return result;
+	}
+
+	/**
      * End app with message
      * @param message
      */
