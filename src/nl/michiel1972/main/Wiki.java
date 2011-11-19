@@ -561,7 +561,7 @@ public class Wiki implements Serializable
      */
     public Wiki(String domain, UploadToCommonsActivity uplActivity)
     {
-        if (domain == null || domain.isEmpty())
+        if (domain == null || domain.length() == 0)
             //domain = "en.wikipedia.org";
         	domain = "commons.wikimedia.org";
         this.domain = domain;
@@ -1156,7 +1156,7 @@ public class Wiki implements Serializable
             // skip any containing new lines or double letters
             if (token.contains("\n"))
                 continue;
-            if (token.isEmpty())
+            if (token.length() == 0)
                 continue;
 
             // trim the starting colon, if present
@@ -2040,7 +2040,7 @@ public class Wiki implements Serializable
         ArrayList<String> links = new ArrayList<String>(750);
         do
         {
-            if (!plcontinue.isEmpty())
+            if (plcontinue.length() != 0)
             {
                 url.append("&plcontinue=");
                 url.append(plcontinue);
@@ -2067,7 +2067,7 @@ public class Wiki implements Serializable
                 a = b;
             }
         }
-        while (!plcontinue.isEmpty());
+        while (plcontinue.length() != 0);
         links.remove(0); // remove the first one, as that is an artifact of the parsing process
     	log(Level.INFO, "Successfully retrieved links used on " + title + " (" + links.size() + " links)", "getLinksOnPage");
     	return links.toArray(new String[0]);
@@ -2519,7 +2519,7 @@ public class Wiki implements Serializable
         buffer.append(token);
         if (bot && user.isAllowedTo("markbotedits"))
             buffer.append("&markbot=1");
-        if (!reason.isEmpty())
+        if (reason.length() != 0)
         {
             buffer.append("&summary=");
             buffer.append(reason);
@@ -2634,7 +2634,7 @@ public class Wiki implements Serializable
         StringBuilder buffer = new StringBuilder(10000);
         buffer.append("title=");
         buffer.append(rev.getPage());
-        if (!reason.isEmpty())
+        if (reason.length() != 0)
         {
             buffer.append("&summary=");
             buffer.append(reason);
@@ -2721,7 +2721,7 @@ public class Wiki implements Serializable
         Calendar timestamp = timestampToCalendar(convertTimestamp(xml.substring(a, b)));
 
         // title
-        if (title.isEmpty())
+        if (title.length() == 0)
         {
             a = xml.indexOf("title=\"") + 7;
             b = xml.indexOf('\"', a);
@@ -3195,7 +3195,7 @@ public class Wiki implements Serializable
         connection.connect();
 
         // send data
-       
+
         boundary = "--" + boundary + "\r\n";
         DataOutputStream out = new DataOutputStream(connection.getOutputStream());
         // DataOutputStream out = new DataOutputStream(System.out);
@@ -3225,7 +3225,7 @@ public class Wiki implements Serializable
         out.writeBytes(boundary);
         
         // reason (awaiting scap)
-        if (!reason.isEmpty())
+        if (reason.length() != 0)
         {
             out.writeBytes("Content-Disposition: form-data; name=\"comment\"\r\n");
             out.writeBytes("Content-Type: text/plain\r\n\r\n");
@@ -3483,7 +3483,7 @@ public class Wiki implements Serializable
         // prepare the url
         StringBuilder temp = new StringBuilder(query);
         temp.append("action=query&list=usercontribs&ucprop=title%7Ctimestamp%7Cflags%7Ccomment%7Cids&uclimit=max&");
-        if (prefix.isEmpty())
+        if (prefix.length() == 0)
         {
             temp.append("ucuser=");
             temp.append(URLEncoder.encode(user, "UTF-8"));
@@ -3528,7 +3528,7 @@ public class Wiki implements Serializable
         while (!ucstart.equals("done"));
 
         // clean up
-        log(Level.INFO, "Successfully retrived contributions for " + (prefix.isEmpty() ? user : prefix) + " (" + revisions.size() + " edits)", "contribs");
+        log(Level.INFO, "Successfully retrived contributions for " + (prefix.length() == 0 ? user : prefix) + " (" + revisions.size() + " edits)", "contribs");
         return revisions.toArray(new Revision[0]);
     }
 
@@ -4300,7 +4300,7 @@ public class Wiki implements Serializable
             urlBase.append("&bkend=");
             urlBase.append(calendarToTimestamp(end));
         }
-        if (!user.isEmpty())
+        if (user.length() != 0)
         {
             urlBase.append("&bkusers=");
             urlBase.append(user);
@@ -4338,7 +4338,7 @@ public class Wiki implements Serializable
 
         // log statement
         StringBuilder logRecord = new StringBuilder("Successfully fetched IP block list ");
-        if (!user.isEmpty())
+        if (user.length() != 0)
         {
             logRecord.append(" for ");
             logRecord.append(user);
@@ -4508,7 +4508,7 @@ public class Wiki implements Serializable
         }
 
         // check for target
-        if (!target.isEmpty())
+        if (target.length() != 0)
         {
             url.append("&letitle=");
             url.append(URLEncoder.encode(target, "UTF-8"));
@@ -4884,7 +4884,7 @@ public class Wiki implements Serializable
         // @revised 0.15 to add short/long pages
         StringBuilder url = new StringBuilder(query);
         url.append("action=query&list=allpages&aplimit=max");
-        if (!prefix.isEmpty()) // prefix
+        if (prefix.length() != 0) // prefix
         {
             // cull the namespace prefix
             namespace = namespace(prefix);
@@ -4934,12 +4934,12 @@ public class Wiki implements Serializable
         {
             // connect and read
             String s = url.toString();
-            if (!next.isEmpty())
+            if (next.length() != 0)
                 s += ("&apfrom=" + next);
             String line = fetch(s, "listPages", false);
 
             // don't set a continuation if no max, min, prefix or protection level
-            if (maximum < 0 && minimum < 0 && prefix.isEmpty() && level == NO_PROTECTION)
+            if (maximum < 0 && minimum < 0 && prefix.length() == 0 && level == NO_PROTECTION)
                 next = "done";
             // find next value
             else if (line.contains("apfrom="))
@@ -5226,7 +5226,7 @@ public class Wiki implements Serializable
         // WARNING: do not use on WMF sites until r84257 goes live!
 
         // must specify a prefix
-        if (title.equals("|") && prefix.isEmpty())
+        if (title.equals("|") && prefix.length() == 0)
             throw new IllegalArgumentException("Interwiki backlinks: title specified without prefix!");
 
         StringBuilder url = new StringBuilder(query);
@@ -5244,7 +5244,7 @@ public class Wiki implements Serializable
         do
         {
             String line = "";
-            if (iwblcontinue.isEmpty())
+            if (iwblcontinue.length() == 0)
                 line = fetch(url.toString(), "getInterWikiBacklinks", false);
             else
                 line = fetch(url.toString() + "&iwblcontinue=" + iwblcontinue, "getInterWikiBacklinks", false);
@@ -5276,7 +5276,7 @@ public class Wiki implements Serializable
                 x = f;
             }
         }
-        while(!iwblcontinue.isEmpty());
+        while(iwblcontinue.length() != 0);
         log(Level.INFO, "Successfully retrieved interwiki backlinks (" + links.size() + " interwikis)", "getInterWikiBacklinks");
         return links.toArray(new String[0][0]);
     }
@@ -6334,7 +6334,7 @@ public class Wiki implements Serializable
     protected void checkErrors(String line, String caller) throws IOException, LoginException
     {
         // empty response from server
-        if (line.isEmpty()) 
+        if (line.length() == 0) 
             throw new UnknownError("Received empty response from server!");
         // successful
         if (line.contains("result=\"Success\""))
